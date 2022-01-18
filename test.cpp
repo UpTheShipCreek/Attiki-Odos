@@ -27,19 +27,36 @@ class Node{
 
 class Segment{
     int Capacity;
+    Node* Start_Node;
+    Node* End_Node;
 
     public:
     Segment* Previous;
     Segment* Next;
     Segment() = default;
-    Segment(int capacity){
+    Segment(int capacity, Node* start_node, Node* end_node){
         Previous = NULL;
         Next = NULL;
         this->Capacity = capacity;
+        this->Start_Node = start_node;
+        this->End_Node = end_node;
     }
     
     int segment_get_capacity(){
         return this->Capacity;
+    }
+
+    Node* segment_get_start_node(){
+        return this->Start_Node;
+    }
+
+    Node* segment_get_end_node(){
+        return this->End_Node;
+    }
+
+    void print(){
+        cout << "This segment starts at the node " << this->Start_Node->node_get_name() << ", ends at the node " <<  this->End_Node->node_get_name()
+        << " and has a capacity of " << this->Capacity << endl;
     }
 };
 
@@ -73,15 +90,17 @@ class Motorway{
 
 
         //Creating the Segments
+        Node* seg_start_node = this->Start;
         temp = Start->Next;
         if(temp != NULL){
-            this->First_Seg = new Segment(SOFT_CAP + random_number(DISPARITY));
+            this->First_Seg = new Segment(SOFT_CAP + random_number(DISPARITY), seg_start_node, seg_start_node->Next);
             temp = temp->Next;
+            seg_start_node = seg_start_node->Next;
         }
         Segment* temp_Seg = First_Seg;
         Segment* new_Seg;
         while(temp != NULL){
-            new_Seg = new Segment(SOFT_CAP + random_number(DISPARITY));
+            new_Seg = new Segment(SOFT_CAP + random_number(DISPARITY), seg_start_node, seg_start_node->Next);
             new_Seg->Previous = temp_Seg;
             new_Seg->Next = NULL;
 
@@ -89,6 +108,7 @@ class Motorway{
             temp_Seg = temp_Seg->Next;
 
             temp = temp->Next;
+            seg_start_node = seg_start_node->Next;
         }
         //Creating the Segment
 
@@ -112,7 +132,7 @@ class Motorway{
         //Testing if the Segments are being created correctly
         temp_Seg = First_Seg;
         while(temp_Seg != NULL){
-            cout << temp_Seg->segment_get_capacity() << endl;
+            temp_Seg->print();
             temp_Seg = temp_Seg->Next;
         }
         //Testing if the Segments are being created correctly
