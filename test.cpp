@@ -1,7 +1,58 @@
+#include <vector>
+#include <algorithm>
 #include "names.h" //includes iostream string and namespace std
 #include "random.h"
 #define SOFT_CAP 400
 #define DISPARITY 200
+
+
+class Node;
+
+class Vechicle{
+    bool is_Ready;
+    bool in_Queue;
+    Node* Destination;
+    Node* Current;
+
+    public:
+    Vechicle() = default;
+    Vechicle(Node* destination){
+        this->is_Ready = false;
+        this->Destination = destination;
+    }
+
+    void set_ready(){
+        this->is_Ready = true;
+    }
+
+    
+
+};
+
+class Toll{
+    int Price;
+    bool is_Electronic;
+    vector<Vechicle> Queue;
+
+    public:
+    Toll() = default;
+    Toll(int price, bool is_electronic){
+        this->Price = price;
+        this->is_Electronic = is_electronic;
+    }   
+
+    void toll_add_to_q(Vechicle vechicle){
+        Queue.insert(Queue.begin(), vechicle);
+    }
+
+    void toll_exit_from_q(){
+        Queue.pop_back();
+    }
+
+    int toll_queue_size(){
+        return Queue.size();
+    }
+};
 
 class Node{
     int ID;
@@ -56,7 +107,7 @@ class Segment{
 
     void print(){
         cout << "This segment starts at the node " << this->Start_Node->node_get_name() << ", ends at the node " <<  this->End_Node->node_get_name()
-        << " and has a capacity of " << this->Capacity << endl;
+        << " and has a capacity of " << this->Capacity << " vechicles."<< endl;
     }
 };
 
@@ -154,6 +205,46 @@ class Motorway{
         }
     }
 
+    Node* node_get_in_position(int position){
+        // if(position >= this->Size){ //it can't be equal since the positioning starts counting from 0, meaning that the position equal to the size never exists
+        //     return; //some error
+        // }
+        int i = 0;
+        Node* temp = this->Start;
+        while(i < position){
+            temp = temp->Next;
+            i++;
+        }
+        return temp;
+    }
+
+    Segment* segment_get_in_position(int position){
+        // if(position >= this->Size-1){
+        //     return; //can't be equal to the size-1 since #ofsegments are #ofnodes-1
+        // }
+        int i = 0;
+        Segment* temp_Seg = this->First_Seg;
+        while(i < position){
+            temp_Seg = temp_Seg->Next;
+            i++;
+        }
+        return temp_Seg;
+    }
+
+    Segment* segment_get_starting_from_node(Node* node){
+        int i, seg_no;
+        seg_no = this->Size -1;
+        for(i = 0; i < seg_no; i++){
+            if(segment_get_in_position(i)->segment_get_start_node() == node){
+                return segment_get_in_position(i);
+            }
+            // else if(segment_get_in_position(i)->segment_get_end_node() == node){
+            //     return segment_get_in_position(i+1);
+            // }
+        }
+        return this->First_Seg; //error message probably
+    }
+
     int get_size(){
         return this->Size;
     }
@@ -161,7 +252,25 @@ class Motorway{
 
 int main(void){
     srand(time(NULL));
+
+    Toll my_toll(random_number(5), false);
+    for(int i = 0; i < 10; i++){
+        Vechicle my_vechicle;
+        my_toll.toll_add_to_q(my_vechicle);
+    }
+    Vechicle my_vechicle;
+    my_toll.toll_exit_from_q();
+
+    cout << my_toll.toll_queue_size() << endl;
+
     Motorway my_motorway(21);
+    for(int i = 0; i < 21; i++){
+        cout << my_motorway.node_get_in_position(i)->node_get_id() << endl;
+        cout << my_motorway.segment_get_starting_from_node(my_motorway.node_get_in_position(i))->segment_get_start_node()->node_get_id() << endl;
+    }
+
+
+
 
     return 0;
 }
