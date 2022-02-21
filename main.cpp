@@ -7,7 +7,7 @@
 #include "names.h"
 #include "random.h"
 #define PER 50
-#define CAP 10
+#define CAP 5
 #define NO_O_NODES 10
 #define NO_O_TOLLS 10
 
@@ -85,12 +85,12 @@ class Toll{
     }   
 
     void add(Vechicle vechicle){
-        cout << "Toll add" << endl;
+        //cout << "Toll add" << endl;
         Queue.push_back(vechicle);
     }
 
     void take_out(Vechicle vechicle){
-        cout << "Toll take out" << endl;
+        //cout << "Toll take out" << endl;
         Queue.erase(remove(Queue.begin(), Queue.end(), vechicle), Queue.end());
     }
 
@@ -113,7 +113,7 @@ class Toll{
     }
 
     bool exists(Vechicle vechicle){
-        cout << "Toll exists" << endl;
+        //cout << "Toll exists" << endl;
         if(find(Queue.begin(), Queue.end(), vechicle) != Queue.end()) {
             return true;
         } else {
@@ -169,7 +169,7 @@ class Segment{
             return true;
         } 
         else{
-            cout << "Vechicle not in segment" << endl;
+            cout << "Vechicle " << vechicle.id() <<" not in segment" << endl;
             return false;
         }
     }
@@ -223,18 +223,19 @@ class Node{
                 return i;
             }
         }
-        cout << "No such vechicle" << endl;
-        return 0;
+        //cout << "No such vechicle" << endl;
+        return -1;
     }
 
     void add_T(Vechicle vechicle){
         //cout << "Nodes add T" << endl;
-        this->Tolls[0].add(vechicle); //add to random toll
+        int r = random_number(t_Num-1);
+        this->Tolls[r].add(vechicle); //add to random toll
     }
 
     bool move_T(Vechicle vechicle){
         //cout << "Nodes move T" << endl;
-        if(this->Tolls[0].move(vechicle)){ //remove from the specific toll it was into
+        if(this->Tolls[t_index(vechicle)].move(vechicle)){ //remove from the specific toll it was into
             return true;
         }
         else return false;
@@ -249,7 +250,7 @@ class Node{
         else if(Seg->add(vechicle)){
             return true;
         }
-        cout << "Ka8hsteriseis sthn eisodo tou komvou" << this->Name << endl;
+        cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
         return false;
     }
 
@@ -258,10 +259,12 @@ class Node{
     }
 
     bool move(Vechicle vechicle){
-        if(Tolls[0].exists(vechicle)){ //if the vechicle in in the toll queue move it to the segment
+        if(t_index(vechicle) != -1){ //if the vechicle in in the toll queue move it to the segment
             if(move_T(vechicle)){ //remove it from the Toll queue 
-                Seg->add(vechicle); //and put it in the Segment, not need to remove it from the Node
-                return true;
+                if(Seg->add(vechicle)){ //and put it in the Segment, not need to remove it from the Node
+                    return true;
+                }
+                cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
             }
             return false;
         }
@@ -291,7 +294,7 @@ class Node{
             if(Seg->add(vechicle)){
                 return true;
             }
-            cout << "Ka8hsteriseis sthn eisodo tou komvou" << this->Name << endl;
+            cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
             return false;
         } 
         else return false;
@@ -307,23 +310,41 @@ class Node{
         }
     }
 
+    void ready(int percentage){
+        int i = 0;
+        int size = Vechicles.size();
+        int n = size*(50/100);
+
+        while(i < n){
+            Vechicles[random_number(size-1)].make_ready();
+            i++;
+        }
+    }
+
     void move_all(){
         int i = 0;
         int vech_no, id;
         vech_no = Vechicles.size();
         while(i < vech_no){
-            Vechicles[i].make_ready();
+            if(coin_flip()) Vechicles[i].make_ready(); //need to make coin_flip take the work with percentages
             id = Vechicles[i].id();
             if(move(Vechicles[i])){
                 cout << "Vechicle " << id << " moved successfully" << endl;
-                if(vech_no == Vechicles.size()) i++;
-                else vech_no--;
+                if(vech_no == Vechicles.size()) i++; //if the vector wasn't reduced in size increment the iterator 
+                else vech_no--; //if the vector size was reduced update the number of vechicles to the new size
             }
             else{
                 cout << "Vechicle " << id << " couldn't move" << endl;
                 i++;
             }
         }
+    }
+
+    bool empty(){
+        if(Vechicles.size() == 0){
+            return true;
+        }
+        else return false;
     }
 
 };
@@ -392,8 +413,10 @@ class Motorway{
     void move(){
         int i = 0;
         int j, id, n_size, p;
+        //ready_all();
         for(j = Size -1 ; j >= 0; j--){
             n_size = node(j)->Vechicles.size();
+            //node(j)->ready(PER);
             node(j)->move_all();
             // while(i < node(p)->Vechicles.size()){ //while for all the vechicles in the node
             //     node(p)->Vechicles[i].set_ready(); //WILL REMOVE
@@ -412,17 +435,40 @@ class Motorway{
             // }
         }
     }
+
+    void ready_all(){
+        int i;
+        for(i = 0; i < Size; i++){
+            node(i)->ready(100);
+        }
+    }
+    
+    bool empty(){
+        int i;
+        Node* temp = First;
+        if(!temp->empty()){
+            return false;
+        }
+        for(i = 1; i < Size; i++){
+            temp = temp->Next;
+            if(!temp->empty()) return false;
+        }
+        return true;
+    }
+
 };
 
 int main(void){
     int i;
     srand(time(0));
     Motorway my_motorway(NO_O_NODES, PER);
-    for(i = 0; i < 20; i++){
-        Vechicle vechicle(i, i);
-        my_motorway.add(vechicle, 0);
+    for(i = 0; i < 100; i++){
+        Vechicle vechicle(i, random_number(NO_O_NODES-1)); //id and destination index
+        my_motorway.add(vechicle, random_number(NO_O_NODES-1));
     }
-    //my_motorway.ready();
-    my_motorway.move(); 
-    my_motorway.move(); 
+    
+    while(!my_motorway.empty()){
+        my_motorway.move();
+    }
+    
 }
