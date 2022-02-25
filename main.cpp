@@ -2,13 +2,13 @@
 #include <vector>
 #include <algorithm>
 #include <bits/stdc++.h>
-#include <time.h>
+#include <ctime>
 
 #include "names.h"
 #include "random.h"
-#define PER 50
-#define CAP 5
-#define NO_O_NODES 10
+#define PER 30
+#define CAP 10
+#define NO_O_NODES 5
 #define NO_O_TOLLS 10
 
 using namespace std;
@@ -26,29 +26,45 @@ class Vechicle{
         this->Ready = false;
         this->in_Queue = true;
         this->Destination = destination;
-        //cout << "A vechicle was created" << endl;
+        //cout << "Vechicle " << Id << " has destination node " << Destination << endl;
+    }
+
+    Vechicle(const Vechicle &v){
+        this->Ready = v.Ready; 
+        this->in_Queue = v.in_Queue; 
+        this->Destination = v.Destination;
+        this->Id = v.Id;
     }
 
     bool operator==(const Vechicle& v) {
-        if(this->Id == v.Id) return true;
+        if(this->Id == v.Id && this->Destination == v.Destination) return true;
         else return false;
     }
 
+    bool ready(){  //if it was already ready return true
+        if(this->Ready) return true;
+        cout << "Setting vechicle " << Id << " ready" << endl;
+        this->Ready = true;
+        return false;
+    }
+
     void make_ready(){
-        //cout << "Vechicle " << Id << " is set ready" << endl;
         this->Ready = true;
     }
 
+    bool is_ready(){
+        if(this->Ready) return true;
+        else return false;
+    }
+
+    void unready(){
+        this->Ready = false;
+        cout << "Vechicle " << this->Id << " is made unready" << endl; 
+    }
+
     bool move(){
-        if(this->Ready == true){
-            //cout << "Vehicle " << Id << " is trying to move" << endl;
-            this->Ready = false;
-            return true;
-        }
-        else{
-            cout << "Vehicle " << Id << " is not ready to move" << endl;
-            return false;
-        }
+        if(this->Ready) cout << "Vechicle " << this->Id << " is ready" << endl;
+        return this->Ready;
     }
     int id(){
         return Id;
@@ -106,6 +122,7 @@ class Toll{
     bool move(Vechicle vechicle){
         //cout << "Toll move" << endl;
         if(vechicle.move()){
+            //vechicle.unready();
             this->take_out(vechicle);
             return true;
         }
@@ -140,14 +157,18 @@ class Segment{
         //cout << "A segment was created" << endl;
     }
 
-    bool add(Vechicle vechicle){
-        if(not_full()){
-            Vechicles.push_back(vechicle);
-            return true;
-        }
-        else{
-            return false;
-        }
+    // bool add(Vechicle vechicle){
+    //     if(not_full()){
+    //         Vechicles.push_back(vechicle);
+    //         return true;
+    //     }
+    //     else{
+    //         return false;
+    //     }
+    // }
+
+    void add(Vechicle vechicle){
+        Vechicles.push_back(vechicle);  
     }
 
     void take_out(Vechicle vechicle){
@@ -158,6 +179,7 @@ class Segment{
     bool move(Vechicle vechicle){
         //cout << "Segment move" << endl;
         if(vechicle.move()){
+            //vechicle.unready();
             this->take_out(vechicle);
             return true;
         }
@@ -190,7 +212,7 @@ class Node{
     Toll* Tolls;
 
     public:
-    vector<Vechicle> Vechicles;
+    vector<*Vechicle> Vechicles;
     Node* Next;
     Node(int id, string name){
         this->Id = id;
@@ -223,7 +245,6 @@ class Node{
                 return i;
             }
         }
-        //cout << "No such vechicle" << endl;
         return -1;
     }
 
@@ -241,17 +262,27 @@ class Node{
         else return false;
     }
 
-    bool add(Vechicle vechicle){ //returns false if it couldn't add the vechicle to a segment or a toll queue, the vechicle still belongs in this node now though
+    // bool add(Vechicle vechicle){ //returns false if it couldn't add the vechicle to a segment or a toll queue, the vechicle still belongs in this node now though
+    //     Vechicles.push_back(vechicle);
+    //     if(vechicle.in_q()){ //every vechicle starts off in Queue
+    //         add_T(vechicle);
+    //         return true;
+    //     }
+    //     else if(Seg->add(vechicle)){
+    //         return true;
+    //     }
+    //     cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
+    //     return false;
+    // }
+
+    void add(Vechicle vechicle){ //returns false if it couldn't add the vechicle to a segment or a toll queue, the vechicle still belongs in this node now though
         Vechicles.push_back(vechicle);
-        if(vechicle.in_q()){ //every vechicle starts off in Queue
+        if(vechicle->in_q()){ //every vechicle starts off in Queue
             add_T(vechicle);
-            return true;
         }
-        else if(Seg->add(vechicle)){
-            return true;
+        else if(Seg->not_full()){
+            Seg->add(vechicle);
         }
-        cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
-        return false;
     }
 
     void take_out(Vechicle vechicle){
@@ -259,46 +290,114 @@ class Node{
     }
 
     bool move(Vechicle vechicle){
-        if(t_index(vechicle) != -1){ //if the vechicle in in the toll queue move it to the segment
-            if(move_T(vechicle)){ //remove it from the Toll queue 
-                if(Seg->add(vechicle)){ //and put it in the Segment, not need to remove it from the Node
-                    return true;
-                }
-                cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
-            }
-            return false;
+        if(!exists(vechicle)) return false; //if the vechicle is not in the node return false
+
+        //OVERSHOT
+        if(this->id() >= vechicle.destination()){
+            cout << "WHat the fuck bro" << endl;
+            take_out(vechicle);
+            vechicle.exit();
+            return true;
         }
-        else if(Seg->exists(vechicle)){
-            if(Seg->move(vechicle)){ //remove it from the current segment and add it to the next, add the vechicle into the vector of the next node and remove it from this one
-                if(this->Next != NULL){
-                    if(this->Next->id() >= vechicle.destination()){ //if the vechicle is past its destination remove it 
-                        take_out(vechicle);
-                        vechicle.exit(); 
-                        return true;
-                    }
-                    else if(Next->add(vechicle)){ // if there is a next node and the vechicle is not past its destination just put it in there, even if the segment is full
-                        take_out(vechicle);
-                        return true;
-                    }
-                    else return false;
-                }
-                else{ //if the Node doesn't have a next, just remove it
-                    take_out(vechicle);
-                    vechicle.exit(); 
-                    return true;
-                }
-            }
-            else return false;
-        }
-        else if(exists(vechicle)){  // if vechicle is in the node but neither in Queue or in the segment, then try to put it in the next segment
-            if(Seg->add(vechicle)){
+        //OVERSHOT
+
+        //NODE QUEUE CHECKS
+        if(t_index(vechicle) == -1 && Seg->exists(vechicle) == false){ //if the vechicle was neither in toll queue or a segment
+            if(Seg->not_full()){    // try to put it in a segment
+                Seg->add(vechicle); 
+                cout << "Vechicle " << vechicle.id() << " moving on from node " << Id << " queues, to the segment"  << endl;
                 return true;
             }
-            cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
+            cout << "Vechicle " << vechicle.id() << " stuck in Node Queue" << endl;
             return false;
-        } 
-        else return false;
+        }
+        //NODE QUEUE CHECKS
+        
+        if(!vechicle.move()) return false; //if the vechicle is not ready to move return false
+        vechicle.unready(); //the vechicle will move no matter what, so we put it back in the unready state
+        vechicle.is_ready(); //WHAT IS HAPPENING BRO
+        //SEGMENT CHECKS
+        if(Seg->exists(vechicle)){
+            cout << "Vechicle " << vechicle.id() << " moving on from node " << Id << " segment"  << endl;
+            Seg->take_out(vechicle);
+            take_out(vechicle);
+            if(this->Next != NULL){ //if there are more nodes
+                if(this->Next->id() >= vechicle.destination()){ //if you have reached your destination leave
+                    vechicle.exit();
+                    return true;
+                }
+                this->Next->add(vechicle); //adding the vechicle to the next segment
+                return true;
+            }       
+            vechicle.exit();    //if there are no any more nodes just leave
+            return true;
+        }
+        //SEGMENT CHECKS
+
+        //TOLL CHECKS
+        int index = t_index(vechicle);
+        if(index != -1){ //if the vechicle was in the tolls
+            take_out(vechicle); //TESTING?
+            Tolls[index].take_out(vechicle); //remove it from the tolls
+            add(vechicle); //TESTING?
+            if(Seg->not_full()){   //add to the segment if it is not full
+                Seg->add(vechicle);
+            }
+            return true;
+        }
+        //TOLL CHECKS
+        return false; //no way to come here I think
     }
+
+    // bool move(Vechicle vechicle){
+    //     if(t_index(vechicle) != -1){ //if the vechicle in in the toll queue move it to the segment
+    //         if(move_T(vechicle)){ //remove it from the Toll queue READY = FALSE 
+    //             cout << "toll move" << endl;
+    //             if(Seg->add(vechicle)){ //and put it in the Segment, not need to remove it from the Node
+    //                 vechicle.unready();
+    //                 return true;
+    //             }
+    //             cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
+    //         }
+    //         return false;
+    //     }
+    //     else if(Seg->exists(vechicle)){
+    //         if(Seg->move(vechicle)){ //(READY = FALSE)remove it from the current segment and add it to the next, add the vechicle into the vector of the next node and remove it from this one
+    //             cout << "segment move" << endl;
+    //             if(this->Next != NULL){
+    //                 if(this->Next->id() >= vechicle.destination()){ //if the vechicle is past its destination remove it 
+    //                     take_out(vechicle);
+    //                     vechicle.exit(); 
+    //                     vechicle.unready();
+    //                     return true;
+    //                 }
+    //                 else if(Next->add(vechicle)){ // if there is a next node and the vechicle is not past its destination just put it in there, even if the segment is full
+    //                     take_out(vechicle);
+    //                     vechicle.unready();
+    //                     return true;
+    //                 }
+    //                 else return false;
+    //             }
+    //             else{ //if the Node doesn't have a next, just remove it
+    //                 take_out(vechicle);
+    //                 vechicle.exit(); 
+    //                 vechicle.unready();
+    //                 return true;
+    //             }
+    //         }
+    //         else return false;
+    //     }
+    //     else if(exists(vechicle)){  // if vechicle is in the node but neither in Queue or in the segment, then try to put it in the next segment
+    //         cout << "directly added to segment" << endl;
+    //         if(Seg->add(vechicle)){
+    //             vechicle.unready();
+    //             return true;
+    //         }
+    //         cout << "Ka8hsteriseis sthn eisodo tou komvou " << this->Name << endl;
+    //         return false;
+    //     } 
+    //     else return false;
+    // }
 
     bool exists(Vechicle vechicle){
         if(find(Vechicles.begin(), Vechicles.end(), vechicle) != Vechicles.end()){
@@ -310,34 +409,42 @@ class Node{
         }
     }
 
-    void ready(int percentage){
-        int i = 0;
-        int size = Vechicles.size();
-        int n = size*(50/100);
+    // bool ready(int percentage){
+    //     if(empty()) return false;
+    //     cout << "Node Ready" << endl;
+    //     int i = 0;
+    //     double p = (double)percentage/100;
+    //     int size = Vechicles.size();
+    //     int n = size*p;
 
-        while(i < n){
-            Vechicles[random_number(size-1)].make_ready();
-            i++;
-        }
-    }
+    //     while(i < n){
+    //         cout << i << endl;
+    //         Vechicles[random_number(size-1)].ready();
+    //         i++;
+    //     }
+    //     return true;
+    // }
 
-    void move_all(){
+    int move_all(){ //returns the number of vechicles that moved(Toll->Segment, Segment->Segment, NodeQ->Segment)
         int i = 0;
-        int vech_no, id;
+        int vech_no, id; 
+        int counter = 0;
         vech_no = Vechicles.size();
         while(i < vech_no){
-            if(coin_flip()) Vechicles[i].make_ready(); //need to make coin_flip take the work with percentages
+            //if(w_coin_flip(PER)) Vechicles[i].make_ready(); //need to make coin_flip take the work with percentages
             id = Vechicles[i].id();
             if(move(Vechicles[i])){
                 cout << "Vechicle " << id << " moved successfully" << endl;
                 if(vech_no == Vechicles.size()) i++; //if the vector wasn't reduced in size increment the iterator 
                 else vech_no--; //if the vector size was reduced update the number of vechicles to the new size
+                counter++;
             }
             else{
                 cout << "Vechicle " << id << " couldn't move" << endl;
                 i++;
             }
         }
+        return counter;
     }
 
     bool empty(){
@@ -357,6 +464,7 @@ class Motorway{
     Motorway(int no_of_nodes, int percentage){
         this->First = new Node(0, Names::node_name[0]);
         this->Size = no_of_nodes;
+        this->Percentage = percentage;
         Node* N;
         Node* temp = First;
         for(int i = 1; i < Size; i++){
@@ -391,69 +499,71 @@ class Motorway{
         return temp;
     }
 
-    void add(Vechicle vechicle, int position){
-        if(node(position)->add(vechicle)){
-            cout << "Vechicle " << vechicle.id() << " has entered the motorway" << endl;
-        }
-    }
-
-    // void ready(){
-    //     int i, j, n_size;
-    //     for(i = 0; i < Size; i++){
-    //         cout << "i loop" << endl;
-    //         n_size = node(i)->Vechicles.size();
-    //         for(j = 0; j < n_size*(Percentage/100); j++){
-    //             cout << "j loop" << endl;
-    //             node(j)->Vechicles[random_number(n_size)].set_ready();
-    //             cout << "Setting random vechicle ready" << endl;
-    //         }
-    //     }
-    // }
-
-    void move(){
-        int i = 0;
-        int j, id, n_size, p;
-        //ready_all();
-        for(j = Size -1 ; j >= 0; j--){
-            n_size = node(j)->Vechicles.size();
-            //node(j)->ready(PER);
-            node(j)->move_all();
-            // while(i < node(p)->Vechicles.size()){ //while for all the vechicles in the node
-            //     node(p)->Vechicles[i].set_ready(); //WILL REMOVE
-            //     id = node(p)->Vechicles[i].id(); //getting the Id of the specific vechicle 
-            //     if(node(p)->move(node(p)->Vechicles[i])){ //trying to move that specific vechicle
-            //         cout << "Vechicle " << id << " moved successfully" << endl;
-            //         if(n_size > node(p)->Vechicles.size()){ //if the vector got reduced then don't increase the counter
-            //             n_size--; //save the size of the previous loop for comparison
-            //         }
-            //         else i++;
-            //     }
-            //     else{
-            //         cout << "Vechicle " << id << " couldn't move" << endl;
-            //         i++; //go to the next vechicle in the same vector since the since didn't change
-            //     }
-            // }
-        }
-    }
-
-    void ready_all(){
+    int no_o_vechicles(){
         int i;
+        int c = 0;
         for(i = 0; i < Size; i++){
-            node(i)->ready(100);
+            c += node(i)->Vechicles.size();
         }
+        return c;
+    }
+
+    void add(Vechicle vechicle, int position){
+        node(position)->add(vechicle);
+        cout << "Vechicle " << vechicle.id() << " with destination "<< vechicle.destination()<<" has entered the motorway in position " << position << endl;
+    }
+
+    int ready(){
+        int s, r;
+        //int* r = new int[Size];
+        int i = 0;
+        double p = (double)Percentage/100;
+        int n = no_o_vechicles()*p;
+        if(n == 0 && no_o_vechicles() != 0){
+            n = 1;
+        }
+        //cout << "number of vechicles " << n << endl;
+        while(i < n){
+            r = rand()%Size; //pick a random node from the motorway
+            //cout << r << endl;
+            while(node(r)->empty()){
+                //cout << "Node " << node(r)->id() << " is empty for some reason" << endl;
+                r = rand()%Size;
+            }
+            s = node(r)->Vechicles.size(); //random vechicle within the node
+            if(!node(r)->Vechicles[random_number(s-1)].ready()){
+                i++;
+            }
+            cout << "In the while " << i << endl;
+        }
+        return i;
+    }
+
+    int move(){
+        int j;
+        int counter = 0;
+        for(j = Size -1 ; j >= 0; j--){
+            counter+= node(j)->move_all();
+        }
+        return counter;
     }
     
+    // bool empty(){
+    //     int i;
+    //     Node* temp = First;
+    //     if(!temp->empty()){
+    //         return false;
+    //     }
+    //     for(i = 1; i < Size; i++){
+    //         temp = temp->Next;
+    //         if(!temp->empty()) return false;
+    //     }
+    //     return true;
+    // }
+
     bool empty(){
-        int i;
-        Node* temp = First;
-        if(!temp->empty()){
-            return false;
-        }
-        for(i = 1; i < Size; i++){
-            temp = temp->Next;
-            if(!temp->empty()) return false;
-        }
-        return true;
+        if(no_o_vechicles() == 0) return true;
+        return false;
     }
 
 };
@@ -462,12 +572,13 @@ int main(void){
     int i;
     srand(time(0));
     Motorway my_motorway(NO_O_NODES, PER);
-    for(i = 0; i < 100; i++){
+    for(i = 0; i < 10; i++){
         Vechicle vechicle(i, random_number(NO_O_NODES-1)); //id and destination index
-        my_motorway.add(vechicle, random_number(NO_O_NODES-1));
+        my_motorway.add(vechicle, 0);
     }
     
     while(!my_motorway.empty()){
+        my_motorway.ready();
         my_motorway.move();
     }
     
